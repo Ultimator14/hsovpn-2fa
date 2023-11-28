@@ -1,0 +1,213 @@
+Add token mode for anyconnect sso cookie
+Derived from https://gitlab.com/openconnect/openconnect/-/commit/32599a985417a6c320d11b2de22f52d9d686f06f?merge_request_iid=124
+
+diff --git a/Makefile.am b/Makefile.am
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -50,12 +50,13 @@ lib_srcs_nullppp = nullppp.c
+ lib_srcs_f5 = f5.c
+ lib_srcs_fortinet = fortinet.c
+ lib_srcs_json = jsondump.c
++lib_srcs_anyconnect_sso = anyconnect-sso.c
+ 
+ library_srcs += $(lib_srcs_juniper) $(lib_srcs_cisco) $(lib_srcs_oath) \
+ 		$(lib_srcs_globalprotect) $(lib_srcs_pulse) \
+ 		$(lib_srcs_oidc) $(lib_srcs_ppp) $(lib_srcs_nullppp) \
+ 		$(lib_srcs_f5) $(lib_srcs_fortinet) $(lib_srcs_json) \
+-		$(lib_srcs_array)
++		$(lib_srcs_array) $(lib_srcs_anyconnect_sso)
+ 
+ lib_srcs_gnutls = gnutls.c gnutls_tpm.c gnutls_tpm2.c
+ lib_srcs_openssl = openssl.c openssl-pkcs11.c
+@@ -73,7 +74,7 @@ POTFILES = $(openconnect_SOURCES) gnutls-esp.c gnutls-dtls.c openssl-esp.c opens
+ 	   $(lib_srcs_esp) $(lib_srcs_dtls) gnutls_tpm2_esys.c gnutls_tpm2_ibm.c \
+ 	   $(lib_srcs_openssl) $(lib_srcs_gnutls) $(library_srcs) \
+ 	   $(lib_srcs_win32) $(lib_srcs_posix) $(lib_srcs_gssapi) $(lib_srcs_iconv) \
+-	   $(lib_srcs_yubikey) $(lib_srcs_stoken) $(lib_srcs_oidc) $(lib_srcs_vhost)
++	   $(lib_srcs_yubikey) $(lib_srcs_stoken) $(lib_srcs_oidc) $(lib_srcs_vhost) $(lib_srcs_anyconnect_sso)
+ 
+ if OPENCONNECT_VHOST
+ library_srcs += $(lib_srcs_vhost)
+diff --git a/anyconnect-sso.c b/anyconnect-sso.c
+new file mode 100644
+--- /dev/null
++++ b/anyconnect-sso.c
+@@ -0,0 +1,56 @@
++/*
++ * OpenConnect (SSL + DTLS) VPN client
++ *
++ * Copyright © 2008-2015 Microsoft Corp
++ *
++ * Author: Alan Jowett <alan.jowett@microsoft.com>
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public License
++ * version 2.1, as published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ */
++
++#include <config.h>
++
++#include <ctype.h>
++#include <errno.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "openconnect-internal.h"
++
++int set_anyconnect_sso_token(struct openconnect_info *vpninfo, const char *token_str)
++{
++	int ret;
++	char *file_token = NULL;
++
++	if (!token_str)
++		return -ENOENT;
++
++	switch(token_str[0]) {
++	case '@':
++		token_str++;
++		/* fall through */
++	case '/':
++		ret = openconnect_read_file(vpninfo, token_str, &file_token);
++		if (ret < 0)
++			return ret;
++		vpninfo->sso_cookie_value = file_token;
++		break;
++
++	default:
++		vpninfo->sso_cookie_value = strdup(token_str);
++		if (!vpninfo->sso_cookie_value)
++			return -ENOMEM;
++	}
++
++	vpninfo->token_mode = OC_TOKEN_MODE_ANYCONNECT_SSO;
++	return 0;
++}
++
++
+diff --git a/library.c b/library.c
+--- a/library.c
++++ b/library.c
+@@ -1336,6 +1336,8 @@ int openconnect_set_token_mode(struct openconnect_info *vpninfo,
+ #endif
+ 	case OC_TOKEN_MODE_OIDC:
+ 		return set_oidc_token(vpninfo, token_str);
++	case OC_TOKEN_MODE_ANYCONNECT_SSO:
++		return set_anyconnect_sso_token(vpninfo, token_str);
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+@@ -1667,7 +1669,9 @@ retry:
+ 		opt->flags &= ~OC_FORM_OPT_IGNORE;
+ 
+ 		if (opt->type == OC_FORM_OPT_SSO_TOKEN) {
+-			do_sso = 1;
++			if (!vpninfo->sso_cookie_value) {
++				do_sso = 1;  //skip sso if cookie is provided via cli
++			}
+ 			continue;
+ 		}
+ 
+diff --git a/main.c b/main.c
+--- a/main.c
++++ b/main.c
+@@ -956,8 +956,8 @@ static void usage(void)
+ 	printf("  -p, --key-password=PASS         %s\n", _("Set key passphrase or TPM SRK PIN"));
+ 	printf("      --external-browser=BROWSER  %s\n", _("Set external browser executable"));
+ 	printf("      --key-password-from-fsid    %s\n", _("Key passphrase is fsid of file system"));
+-	printf("      --token-mode=MODE           %s\n", _("Software token type: rsa, totp, hotp or oidc"));
+-	printf("      --token-secret=STRING       %s\n", _("Software token secret or oidc token"));
++	printf("      --token-mode=MODE           %s\n", _("Software token type: rsa, totp, hotp, oidc, or anyconnect-sso"));
++	printf("      --token-secret=STRING       %s\n", _("Software token secret, oidc token, or anyconnect sso cookie"));
+ #ifndef HAVE_LIBSTOKEN
+ 	printf("                                  %s\n", _("(NOTE: libstoken (RSA SecurID) disabled in this build)"));
+ #endif
+@@ -1453,7 +1453,7 @@ static int autocomplete(int argc, char **argv)
+ 				break;
+ 
+ 			case OPT_TOKEN_MODE: /* --token-mode */
+-				complete_words(comp_opt, prefixlen, "totp", "hotp", "oidc", NULL);
++				complete_words(comp_opt, prefixlen, "totp", "hotp", "oidc", "anyconnect-sso", NULL);
+ 				if (openconnect_has_stoken_support())
+ 					complete_words(comp_opt, prefixlen, "rsa", NULL);
+ 				if (openconnect_has_yubioath_support())
+@@ -2139,6 +2139,8 @@ int main(int argc, char **argv)
+ 				token_mode = OC_TOKEN_MODE_YUBIOATH;
+ 			} else if (strcasecmp(config_arg, "oidc") == 0) {
+ 				token_mode = OC_TOKEN_MODE_OIDC;
++			} else if (strcasecmp(config_arg, "anyconnect-sso") == 0) {
++				token_mode = OC_TOKEN_MODE_ANYCONNECT_SSO;
+ 			} else {
+ 				fprintf(stderr, _("Invalid software token mode \"%s\"\n"),
+ 					config_arg);
+@@ -2844,6 +2846,19 @@ static int process_auth_form_cb(void *_vpninfo,
+ 				vpn_progress(vpninfo, PRG_DEBUG, "Treating hidden form field '%s' as text entry\n", opt->name);
+ 				goto prompt;
+ 			}
++		} else if (opt->type == OC_FORM_OPT_SSO_TOKEN) {
++			if (vpninfo->sso_cookie_value) {
++				opt->_value = vpninfo->sso_cookie_value;
++				vpninfo->sso_cookie_value = NULL;
++			} else {
++				// TODO: implement saved_form_field
++				if (!opt->_value)
++				opt->_value = prompt_for_input("SSO Cookie:", vpninfo, 0);
++			}
++
++			if (!opt->_value)
++				goto err;
++			empty = 0;
+ 		}
+ 	}
+ 
+@@ -3007,6 +3022,21 @@ static void init_token(struct openconnect_info *vpninfo,
+ 		}
+ 
+ 		break;
++
++	case OC_TOKEN_MODE_ANYCONNECT_SSO:
++		switch (ret) {
++		case 0:
++			return;
++		case -ENOENT:
++			fprintf(stderr, _("Can't open anyconnect sso file\n"));
++			exit(1);
++		default:
++			fprintf(stderr, _("General failure in anyconnect sso token\n"));
++			exit(1);
++		}
++
++		break;
++
+ 	case OC_TOKEN_MODE_NONE:
+ 		/* No-op */
+ 		break;
+diff --git a/openconnect-internal.h b/openconnect-internal.h
+--- a/openconnect-internal.h
++++ b/openconnect-internal.h
+@@ -1537,6 +1537,10 @@ int do_gen_hotp_code(struct openconnect_info *vpninfo,
+ int set_oidc_token(struct openconnect_info *vpninfo,
+ 		     const char *token_str);
+ 
++/* anyconnect-sso.c */
++int set_anyconnect_sso_token(struct openconnect_info *vpninfo,
++		     const char *token_str);
++
+ /* stoken.c */
+ int prepare_stoken(struct openconnect_info *vpninfo);
+ int set_libstoken_mode(struct openconnect_info *vpninfo, const char *token_str);
+diff --git a/openconnect.h b/openconnect.h
+--- a/openconnect.h
++++ b/openconnect.h
+@@ -384,6 +384,7 @@ typedef enum {
+ 	OC_TOKEN_MODE_HOTP,
+ 	OC_TOKEN_MODE_YUBIOATH,
+ 	OC_TOKEN_MODE_OIDC,
++	OC_TOKEN_MODE_ANYCONNECT_SSO,
+ } oc_token_mode_t;
+ 
+ typedef enum {

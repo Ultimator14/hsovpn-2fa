@@ -28,11 +28,20 @@ The project comes with some dependencies that must be installed first
 see [here](https://www.infradead.org/openconnect/building.html).
 
 ```bash
-# Clone the repo
-git clone https://gitlab.com/openconnect/openconnect.git
+# Download openconnect
+git submodule update --init --recursive
+
 cd openconnect
 # Patch the source code with the patch in this repo
 git apply ../openconnect.patch
+
+# -- macOS install missing deps
+brew install automake
+wget https://gitlab.com/openconnect/vpnc-scripts/raw/master/vpnc-script
+sudo mkdir /etc/vpnc/ && sudo mv vpnc-script /etc/vpnc/vpnc-script
+sudo chmod +x /etc/vpnc/vpnc-script
+# -- end
+
 # Build openconnect
 ./autogen.sh
 ./configure
@@ -54,7 +63,9 @@ pip install -r requirements.txt
 
 ## Configuration
 
-The script needs some configuration to work. This is done in `secrets.json`
+The script needs some configuration to work. This is done in `secrets.json`.
+
+Add the patched version of openconnect to the `openconnect.executable` if not installed.
 
 ### Credentials
 

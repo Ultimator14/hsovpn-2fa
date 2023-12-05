@@ -25,6 +25,7 @@ CONF_OC_DICT = json_data.get("openconnect")
 
 if CONF_OC_DICT:
     CONF_OC_PREFIX = CONF_OC_DICT["prefix"]
+    CONF_OC_EXECUTABLE = CONF_OC_DICT["executable"]
     CONF_OC_SUFFIX = CONF_OC_DICT["suffix"]
     CONF_OC_VPN_DOMAIN = CONF_OC_DICT["vpn-domain"]
 
@@ -290,7 +291,7 @@ if CONF_OC_DICT:
     print("Runing openconnect")
     command_line = [
         *CONF_OC_PREFIX,
-        "openconnect",
+        CONF_OC_EXECUTABLE,
         "--useragent=AnyConnect",
         "--protocol=anyconnect",
         "--token-mode=anyconnect-sso",

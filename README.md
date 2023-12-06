@@ -27,26 +27,53 @@ The project comes with some dependencies that must be installed first
 (libxml, zlib, openssl, pkgconfig). For more information
 see [here](https://www.infradead.org/openconnect/building.html).
 
+#### Install dependencies
+
+```bash
+# Ubuntu
+apt install -y libxml2 zlib1g-dev git python3 python3-pip openssl pkg-config build-essential autotools-dev automake libtool vpnc libssl-dev libxml2-dev python3.10-venv
+
+#Macos
+brew install automake
+wget https://gitlab.com/openconnect/vpnc-scripts/raw/master/vpnc-script
+mkdir /etc/vpnc/ && mv vpnc-script /etc/vpnc/vpnc-script
+chmod +x /etc/vpnc/vpnc-script
+```
+
+#### Build
+
 ```bash
 # Download openconnect
 git submodule update --init --recursive
 
 cd openconnect
+
 # Patch the source code with the patch in this repo
 git apply ../openconnect.patch
-
-# -- macOS install missing deps
-brew install automake
-wget https://gitlab.com/openconnect/vpnc-scripts/raw/master/vpnc-script
-sudo mkdir /etc/vpnc/ && sudo mv vpnc-script /etc/vpnc/vpnc-script
-sudo chmod +x /etc/vpnc/vpnc-script
-# -- end
 
 # Build openconnect
 ./autogen.sh
 ./configure
 make
 cd ..
+```
+
+#### Install
+
+You can use the openconnect binary directly from the build directory. There is no need to install.
+However if you want to install into `/usr/local/`, you can do so with `make install`.
+
+Note: The openconnect library will be installed into `/usr/local/lib`, which is not in the `LD_LIBRARY_PATH` for some systems.
+If you get errors like this
+
+```
+openconnect: error while loading shared libraries: libopenconnect.so.5: cannot open shared object file: No such file or directory
+```
+
+then try adding the directory to the library path with
+
+```
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib"
 ```
 
 ### Installing python dependencies
@@ -98,8 +125,8 @@ The result should contain `login-url` and `sso-cookie-name` in the form
 
 The script can be configured to directly run openconnect with the correct parameters.
 This is done in the `openconnect` section of `secrets.json`. It contains prefix and
-suffix of the openconnect command as well as the domain to connect to. The openconnect
-call with the predefined values is equivalent to
+suffix of the openconnect command as well as the domain to connect to and the openconnect
+executable name/path. The openconnect call with the predefined values is equivalent to
 
 ```bash
 sudo openconnect \
@@ -108,11 +135,11 @@ sudo openconnect \
     --token-mode=anyconnect-sso \
     --token-secret=SECRET_COOKIE_VALUE_HERE \
     vpn.hs-offenburg.de \
-    --authgroup=5 \
+    --authgroup=2 \
     -vvv --dump-http-traffic \
 ```
 
-Note that openconnect must be in `PATH`. However this can be easily changed in the script.
+Note that openconnect must be in `PATH` with the default settings. A custom openconnect binary can be specified via the `executable` option.
 
 You can remove the `openconnect` key from the `secrets.json` file to disable the direct
 invocation of openconnect. The script will then only output the sso-cookie.

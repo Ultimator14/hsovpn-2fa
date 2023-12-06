@@ -16,8 +16,8 @@ For start, clone this repo.
 
 ```bash
 # Clone the repo
-git clone myrepo
-cd myrepo TODO
+git clone https://github.com/Ultimator14/hsovpn-2fa
+cd hsovpn-2fa
 ```
 
 ### Building openconnect

@@ -6,6 +6,8 @@ import subprocess
 import sys
 from html.parser import HTMLParser
 from urllib.parse import urlparse
+import getpass
+import time
 
 import pyotp
 import requests
@@ -15,7 +17,7 @@ with open("secrets.json", encoding="utf-8") as afile:
 
 # mandatory values (crash if missing)
 CONF_USERNAME = json_data["username"]  # username
-CONF_PASSWORD = json_data["password"]  # password
+CONF_PASSWORD = json_data.get("password")  # password
 CONF_VPN_URL = json_data["login-url"]  # sso-v2-login url
 CONF_SSO_COOKIE_NAME = json_data["sso-cookie-name"]  # name for the sso cookie
 # optional values
@@ -32,7 +34,21 @@ if CONF_OC_DICT:
 
 base_url = "https://" + urlparse(CONF_VPN_URL).netloc
 
-totp = pyotp.TOTP(CONF_TOTP_SECRET) if CONF_TOTP_SECRET else input("Please enter your 6 digit TOTP password")
+_password = None
+def getPassword():
+    global _password
+    if _password is None:
+        _password = CONF_PASSWORD if CONF_PASSWORD else \
+            getpass.getpass(f'Campus password for user {CONF_USERNAME}: ').strip()
+    return _password
+
+_totp = None
+def getTotp():
+    global _totp
+    if _totp is None:
+        _totp = pyotp.TOTP(CONF_TOTP_SECRET) if CONF_TOTP_SECRET else \
+            input("6-digit TOTP password: ").strip()
+    return _totp
 
 s = requests.Session()
 
@@ -80,21 +96,23 @@ class Form:
                 # default to first value in tuple
                 self.input_elements[elem] = self.input_elements_incomplete[elem][0]
 
-    def fill_form(self, name, value):
+    def fill_form(self, name, value, secret=False):
         dict_value = self.input_elements_incomplete.get(name, None)
 
         if dict_value is None:
             return  # value is not in dict
 
+        logValue = "<secret>" if secret else value
+
         if type(dict_value) is tuple:
             # multiple options given
             if value in dict_value:
-                log(f"Selecting form value {name}: {value}")
+                log(f"Selecting form value {name}: {logValue}")
                 self.input_elements[name] = value
                 del self.input_elements_incomplete[name]
         else:
             # empty value, add
-            log(f"Inserting form value {name}: {value}")
+            log(f"Inserting form value {name}: {logValue}")
             self.input_elements[name] = value
             del self.input_elements_incomplete[name]
 
@@ -186,10 +204,12 @@ def fill_form(form):
 
     authmethod = form.input_elements.get("nfmt")
     if authmethod == "LDAP_PASSWORD:1":  # password
-        form.fill_form("nffc", CONF_PASSWORD)
+        form.fill_form("nffc", getPassword(), secret=True)
     elif authmethod == "TOTP:1":  # totp pin
-        form.fill_form("nffc", totp.now())
-
+        form.fill_form("nffc", getTotp().now())
+    elif authmethod == "SMARTPHONE:1":
+        input("Waiting for acceptance of request in NetIQ app. Press enter if done.")
+        time.sleep(0.5)
 
 def extract_multi(pattern_str, content):
     pattern = re.compile(pattern_str)
@@ -302,4 +322,8 @@ if CONF_OC_DICT:
     log("Command line:")
     log(" ".join(command_line))
 
-    p = subprocess.run(command_line)
+    try:
+        p = subprocess.run(command_line)
+    except KeyboardInterrupt:
+        time.sleep(0.5)
+        print("Terminated with Ctrl-C")

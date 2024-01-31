@@ -317,11 +317,11 @@ if CONF_SSO_COOKIE_NAME not in cookies:
     sys.exit(1)
 
 SSO_COOKIE = cookies[CONF_SSO_COOKIE_NAME]
-print("Cookie retrieved")
-print(SSO_COOKIE)
+log("Cookie retrieved")
+log(SSO_COOKIE)
 
 if CONF_OC_DICT:
-    print("Runing openconnect")
+    print("Running openconnect")
     command_line = [
         *CONF_OC_PREFIX,
         CONF_OC_EXECUTABLE,

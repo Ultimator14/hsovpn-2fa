@@ -59,7 +59,7 @@ def getTotp():
     global _totp
     if _totp is None:
         secret = totpSecret()
-        _totp = pyotp.TOTP(secret) if secret else \
+        _totp = pyotp.TOTP(secret).now() if secret else \
             input("6-digit TOTP password: ").strip()
     return _totp
 
@@ -219,7 +219,7 @@ def fill_form(form):
     if authmethod == "LDAP_PASSWORD:1":  # password
         form.fill_form("nffc", getPassword(), secret=True)
     elif authmethod == "TOTP:1":  # totp pin
-        form.fill_form("nffc", getTotp().now())
+        form.fill_form("nffc", getTotp())
     elif authmethod == "SMARTPHONE:1":
         input("Waiting for acceptance of request in NetIQ app. Press enter if done.")
         time.sleep(0.5)

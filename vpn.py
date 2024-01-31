@@ -246,7 +246,7 @@ print("Authenticating...")
 counter = 1
 
 while form is not None:
-    print(f"Step {counter!s}")
+    log(f"Step {counter!s}")
     r = request_with_method(form.method, form.url, form.input_elements)
     con = r.content.decode()
 

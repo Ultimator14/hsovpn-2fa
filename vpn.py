@@ -18,10 +18,10 @@ with open("secrets.json", encoding="utf-8") as afile:
 
 # mandatory values (crash if missing)
 CONF_USERNAME = json_data["username"]  # username
-CONF_PASSWORD = json_data.get("password")  # password
 CONF_VPN_URL = json_data["login-url"]  # sso-v2-login url
 CONF_SSO_COOKIE_NAME = json_data["sso-cookie-name"]  # name for the sso cookie
 # optional values
+CONF_PASSWORD = json_data.get("password")  # password
 CONF_TOTP_SECRET = json_data.get("totp")  # totp secret
 CONF_DEBUG = json_data.get("debug", False)
 CONF_OC_DICT = json_data.get("openconnect")
@@ -32,6 +32,12 @@ if CONF_OC_DICT:
     CONF_OC_SUFFIX = CONF_OC_DICT["suffix"]
     CONF_OC_VPN_DOMAIN = CONF_OC_DICT["vpn-domain"]
 
+
+TOTP_HEX_PREFIX = "hex:"
+if CONF_TOTP_SECRET is not None and CONF_TOTP_SECRET.startswith(TOTP_HEX_PREFIX):
+    TOTP_SECRET = base64.b16decode(CONF_TOTP_SECRET[len(TOTP_HEX_PREFIX) :])
+else:
+    TOTP_SECRET = CONF_TOTP_SECRET
 
 base_url = "https://" + urlparse(CONF_VPN_URL).netloc
 
@@ -48,26 +54,10 @@ def get_password():
     return _password
 
 
-def totp_secret():
-    s = CONF_TOTP_SECRET
-    if not s:
-        return None
-
-    hex_prefix = "hex:"
-
-    if s.startswith(hex_prefix):
-        secret = base64.b16decode(s[len(hex_prefix) :])
-        return base64.b32encode(secret)
-
-    return s
-
-
 def get_totp():
-    global _totp
-    if _totp is None:
-        secret = totp_secret()
-        _totp = pyotp.TOTP(secret).now() if secret else input("6-digit TOTP password: ").strip()
-    return _totp
+    if TOTP_SECRET:
+        return pyotp.TOTP(TOTP_SECRET).now()
+    return input("6-digit TOTP password: ").strip()
 
 
 s = requests.Session()
@@ -247,7 +237,7 @@ def extract_single(pattern_str, content):
     return matches[0]
 
 
-# Initial requst
+# Initial request
 form = Form(CONF_VPN_URL, "GET")
 
 print("Authenticating...")

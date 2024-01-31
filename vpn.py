@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
+import base64
+import getpass
 import json
 import re
 import subprocess
 import sys
+import time
 from html.parser import HTMLParser
 from urllib.parse import urlparse
-import getpass
-import time
-import base64
 
 import pyotp
 import requests
@@ -36,32 +36,39 @@ if CONF_OC_DICT:
 base_url = "https://" + urlparse(CONF_VPN_URL).netloc
 
 _password = None
-def getPassword():
+_totp = None
+
+
+def get_password():
     global _password
     if _password is None:
-        _password = CONF_PASSWORD if CONF_PASSWORD else \
-            getpass.getpass(f'Campus password for user {CONF_USERNAME}: ').strip()
+        _password = (
+            CONF_PASSWORD if CONF_PASSWORD else getpass.getpass(f"Campus password for user {CONF_USERNAME}: ").strip()
+        )
     return _password
 
-def totpSecret():
+
+def totp_secret():
     s = CONF_TOTP_SECRET
     if not s:
         return None
-    hexPrefix = 'hex:'
-    if s.startswith(hexPrefix):
-        secret = base64.b16decode(s[len(hexPrefix):])
-        return base64.b32encode(secret)
-    else:
-        return s
 
-_totp = None
-def getTotp():
+    hex_prefix = "hex:"
+
+    if s.startswith(hex_prefix):
+        secret = base64.b16decode(s[len(hex_prefix) :])
+        return base64.b32encode(secret)
+
+    return s
+
+
+def get_totp():
     global _totp
     if _totp is None:
-        secret = totpSecret()
-        _totp = pyotp.TOTP(secret).now() if secret else \
-            input("6-digit TOTP password: ").strip()
+        secret = totp_secret()
+        _totp = pyotp.TOTP(secret).now() if secret else input("6-digit TOTP password: ").strip()
     return _totp
+
 
 s = requests.Session()
 
@@ -115,17 +122,17 @@ class Form:
         if dict_value is None:
             return  # value is not in dict
 
-        logValue = "<secret>" if secret else value
+        log_value = "<secret>" if secret else value
 
         if type(dict_value) is tuple:
             # multiple options given
             if value in dict_value:
-                log(f"Selecting form value {name}: {logValue}")
+                log(f"Selecting form value {name}: {log_value}")
                 self.input_elements[name] = value
                 del self.input_elements_incomplete[name]
         else:
             # empty value, add
-            log(f"Inserting form value {name}: {logValue}")
+            log(f"Inserting form value {name}: {log_value}")
             self.input_elements[name] = value
             del self.input_elements_incomplete[name]
 
@@ -217,12 +224,13 @@ def fill_form(form):
 
     authmethod = form.input_elements.get("nfmt")
     if authmethod == "LDAP_PASSWORD:1":  # password
-        form.fill_form("nffc", getPassword(), secret=True)
+        form.fill_form("nffc", get_password(), secret=True)
     elif authmethod == "TOTP:1":  # totp pin
-        form.fill_form("nffc", getTotp())
+        form.fill_form("nffc", get_totp())
     elif authmethod == "SMARTPHONE:1":
         input("Waiting for acceptance of request in NetIQ app. Press enter if done.")
         time.sleep(0.5)
+
 
 def extract_multi(pattern_str, content):
     pattern = re.compile(pattern_str)

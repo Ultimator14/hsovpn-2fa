@@ -8,6 +8,7 @@ from html.parser import HTMLParser
 from urllib.parse import urlparse
 import getpass
 import time
+import base64
 
 import pyotp
 import requests
@@ -42,11 +43,23 @@ def getPassword():
             getpass.getpass(f'Campus password for user {CONF_USERNAME}: ').strip()
     return _password
 
+def totpSecret():
+    s = CONF_TOTP_SECRET
+    if not s:
+        return None
+    hexPrefix = 'hex:'
+    if s.startswith(hexPrefix):
+        secret = base64.b16decode(s[len(hexPrefix):])
+        return base64.b32encode(secret)
+    else:
+        return s
+
 _totp = None
 def getTotp():
     global _totp
     if _totp is None:
-        _totp = pyotp.TOTP(CONF_TOTP_SECRET) if CONF_TOTP_SECRET else \
+        secret = totpSecret()
+        _totp = pyotp.TOTP(secret) if secret else \
             input("6-digit TOTP password: ").strip()
     return _totp
 

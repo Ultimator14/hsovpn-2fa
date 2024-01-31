@@ -1,4 +1,4 @@
-# HSO VPN 2FA 
+# HSO VPN 2FA
 
 This project contains a simple python script to complete the 2FA VPN auth flow for the
 Hochschule Offenburg.
@@ -84,7 +84,7 @@ Third, install the required python dependencies. We use a virtual environment he
 # Create virtualenv
 python3 -m venv venv
 # Install requirements
-./venv/bin/activate
+source ./venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -100,6 +100,9 @@ It's required that you enable 2FA authentication for your HS account and setup
 a TOTP secret. Then add your credentials (`username`, `password`) as well as the TOTP
 secret (`totp`) to the `secrets.json` file. You can omit the totp secret. That way
 you will be prompted to enter your 6 digit TOTP pin instead.
+
+The totp secret has to be encoded as base32. If you have a hex-encoded
+secret, prefix the secret with `hex:`.
 
 ### VPN config
 

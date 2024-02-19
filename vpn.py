@@ -338,3 +338,5 @@ if CONF_OC_DICT:
     except KeyboardInterrupt:
         time.sleep(0.5)
         print("Terminated with Ctrl-C")
+else:
+    print(SSO_COOKIE)

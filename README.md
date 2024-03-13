@@ -112,17 +112,19 @@ determine these values by making an openconnect request like this (adapt `authgr
 to your needs).
 
 ```bash
-openconnect -vvv --dump-http-traffic --authgroup=5 --protocol=anyconnect --useragent="AnyConnect" vpn.hs-offenburg.de
+openconnect -vvv --dump-http-traffic --authgroup=2 --protocol=anyconnect --useragent="AnyConnect" vpn.hs-offenburg.de
 ```
 
 The result should contain `login-url` and `sso-cookie-name` in the form
 ```
 ...
-< <sso-v2-login>https://vpn.hs-offenburg.de/+CSCOE+/saml/sp/login?tgname=2FA-Group&#x26;acsamlcap=v2</sso-v2-login>
+< <sso-v2-login>https://vpn.hs-offenburg.de/+CSCOE+/saml/sp/login?tgname=SSL-Group&acsamlcap=v2</sso-v2-login>
 ...
 < <sso-v2-token-cookie-name>acSamlv2Token</sso-v2-token-cookie-name>
 ...
 ```
+
+Note: If the login url contains encoded characters like `&#x26;`, they must be replaced with their actual character (in this case `&`).
 
 ### Running openconnect
 

@@ -296,8 +296,9 @@ while form is not None:
 
     counter += 1
 
-    if counter > 10:
+    if counter > 12:
         # 9 should be enough, increase the limit if required
+        # we use 12 here to handle timeouts in the first 3 steps (username, auth select, password)
         print("ERROR! Too many steps. 9 should be enough. There is something wrong here...")
         print("Check your username, password and TOTP token. Debug output might also help.")
         sys.exit(1)

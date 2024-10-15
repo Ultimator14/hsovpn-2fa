@@ -210,7 +210,7 @@ def get_form_data(page_content):
 def fill_form(form):
     """Add user input to form"""
     form.fill_form("Ecom_User_ID", CONF_USERNAME)  # username prompt
-    form.fill_form("nfchn", "PW+TOTP")  # select totp
+    form.fill_form("nfchn", "PW+TOTP-VPN")  # select totp
 
     authmethod = form.input_elements.get("nfmt")
     if authmethod == "LDAP_PASSWORD:1":  # password

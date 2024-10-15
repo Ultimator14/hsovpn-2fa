@@ -4,7 +4,7 @@ Derived from https://gitlab.com/openconnect/openconnect/-/commit/32599a985417a6c
 diff --git a/Makefile.am b/Makefile.am
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -53,12 +53,13 @@ lib_srcs_nullppp = nullppp.c
+@@ -54,12 +54,13 @@ lib_srcs_nullppp = nullppp.c
  lib_srcs_f5 = f5.c
  lib_srcs_fortinet = fortinet.c
  lib_srcs_json = jsondump.c
@@ -19,7 +19,7 @@ diff --git a/Makefile.am b/Makefile.am
  
  lib_srcs_gnutls = gnutls.c gnutls_tpm.c gnutls_tpm2.c
  lib_srcs_openssl = openssl.c openssl-pkcs11.c
-@@ -76,7 +77,7 @@ POTFILES = $(openconnect_SOURCES) gnutls-esp.c gnutls-dtls.c openssl-esp.c opens
+@@ -77,7 +78,7 @@ POTFILES = $(openconnect_SOURCES) gnutls-esp.c gnutls-dtls.c openssl-esp.c opens
  	   $(lib_srcs_esp) $(lib_srcs_dtls) gnutls_tpm2_esys.c gnutls_tpm2_ibm.c \
  	   $(lib_srcs_openssl) $(lib_srcs_gnutls) $(library_srcs) \
  	   $(lib_srcs_win32) $(lib_srcs_posix) $(lib_srcs_gssapi) $(lib_srcs_iconv) \
@@ -133,7 +133,7 @@ diff --git a/main.c b/main.c
  				if (openconnect_has_stoken_support())
  					complete_words(comp_opt, prefixlen, "rsa", NULL);
  				if (openconnect_has_yubioath_support())
-@@ -2144,6 +2144,8 @@ int main(int argc, char *argv[])
+@@ -2145,6 +2145,8 @@ int main(int argc, char *argv[])
  				token_mode = OC_TOKEN_MODE_YUBIOATH;
  			} else if (strcasecmp(config_arg, "oidc") == 0) {
  				token_mode = OC_TOKEN_MODE_OIDC;
@@ -142,7 +142,7 @@ diff --git a/main.c b/main.c
  			} else {
  				fprintf(stderr, _("Invalid software token mode \"%s\"\n"),
  					config_arg);
-@@ -2849,6 +2851,19 @@ static int process_auth_form_cb(void *_vpninfo,
+@@ -2850,6 +2852,19 @@ static int process_auth_form_cb(void *_vpninfo,
  				vpn_progress(vpninfo, PRG_DEBUG, "Treating hidden form field '%s' as text entry\n", opt->name);
  				goto prompt;
  			}
@@ -162,7 +162,7 @@ diff --git a/main.c b/main.c
  		}
  	}
  
-@@ -3012,6 +3027,21 @@ static void init_token(struct openconnect_info *vpninfo,
+@@ -3013,6 +3028,21 @@ static void init_token(struct openconnect_info *vpninfo,
  		}
  
  		break;

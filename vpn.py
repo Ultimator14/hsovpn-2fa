@@ -253,6 +253,10 @@ while form is not None:
         with open(f"./page{counter!s}.html", "wb") as bfile:
             bfile.write(r.content)
 
+    if "User is locked" in con:
+        print("User is locked!")
+        sys.exit(1)
+
     if (form := get_form_data(con)) is not None:
         fill_form(form)
 

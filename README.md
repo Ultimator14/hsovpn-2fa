@@ -1,5 +1,9 @@
 # HSO VPN 2FA
 
+> [!NOTE]
+> I am no longer employed at the Hochschule Offenburg.  
+> I can therefore no longer test anything. Pull requests welcome!
+
 This project contains a simple python script to complete the 2FA VPN auth flow for the
 Hochschule Offenburg.
 

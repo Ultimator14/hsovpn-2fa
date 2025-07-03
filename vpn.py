@@ -207,19 +207,41 @@ def get_form_data(page_content):
     return None
 
 
+auth_step2 = False
+auth_step2_name = None
+
+
 def fill_form(form):
     """Add user input to form"""
     form.fill_form("Ecom_User_ID", CONF_USERNAME)  # username prompt
-    form.fill_form("nfchn", "PW+TOTP-VPN")  # select totp
+    chain_name = "PW+TOTP-VPN"
+    form.fill_form("nfchn", chain_name)  # select totp
 
-    authmethod = form.input_elements.get("nfmt")
+    global auth_step2
+    global auth_step2_name
+    nfst = form.input_elements.get("nfst")
+    authmethod = None
+    if nfst is not None:
+        try:
+            nfst = json.loads(base64.b64decode(nfst).decode("utf-8"))
+            authmethod = nfst["ls"]["current_method"]
+            for chain in nfst["ls"]["chains"]:
+                if chain["name"] == chain_name:
+                    auth_step2_name = chain["methods"][1]
+                    break
+        except:
+            pass
+
     if authmethod == "LDAP_PASSWORD:1":  # password
         form.fill_form("nffc", get_password(), secret=True)
-    elif authmethod == "TOTP:1":  # totp pin
+        auth_step2 = True
+    elif authmethod == "TOTP:1" or (auth_step2 and auth_step2_name == "TOTP:1"):  # totp pin
         form.fill_form("nffc", get_totp())
-    elif authmethod == "SMARTPHONE:1":
+        auth_step2 = False
+    elif authmethod == "SMARTPHONE:1" or (auth_step2 and auth_step2_name == "SMARTPHONE:1"):
         input("Waiting for acceptance of request in NetIQ app. Press enter if done.")
         time.sleep(0.5)
+        auth_step2 = False
 
 
 def extract_multi(pattern_str, content):

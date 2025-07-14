@@ -41,6 +41,7 @@ else:
     TOTP_SECRET = CONF_TOTP_SECRET
 
 base_url = "https://" + urlparse(CONF_VPN_URL).netloc
+auth_step2 = ""
 
 _password = None
 
@@ -207,40 +208,48 @@ def get_form_data(page_content):
     return None
 
 
-auth_step2 = False
-auth_step2_name = None
-
-
 def fill_form(form):
     """Add user input to form"""
     form.fill_form("Ecom_User_ID", CONF_USERNAME)  # username prompt
     form.fill_form("nfchn", CONF_CHAIN_NAME)  # select totp
 
-    global auth_step2
-    global auth_step2_name
-    nfst = form.input_elements.get("nfst")
-    authmethod = None
-    if nfst is not None:
-        try:
-            nfst = json.loads(base64.b64decode(nfst).decode("utf-8"))
-            authmethod = nfst["ls"]["current_method"]
-            for chain in nfst["ls"]["chains"]:
-                if chain["name"] == CONF_CHAIN_NAME:
-                    auth_step2_name = chain["methods"][1]
-                    break
-        except:
-            pass
+    nfst_b64 = form.input_elements.get("nfst")
+
+    if nfst_b64 in [None, "null"]:
+        # step 1 or 2 (username or chain selection)
+        return
+
+    # step 3 or 4 (first or second factor)
+    try:
+        nfst = json.loads(base64.b64decode(nfst_b64).decode("utf-8"))
+    except (json.JSONDecodeError, base64.binascii.Error) as e:
+        # Note: This should catch the error in case the auth_step2 value of nfst changes
+        # from "null" to something else in the future. Keep a log here to inform users.
+        log("Parsing of `nfst` failed. The auth2step value of this parameter has changed. This message is harmless.", e)
+        return
+
+    current_method = nfst["ls"]["current_method"]
+
+    if current_method is not None:
+        # we are at step 3, extract information
+        chain_methods = next(c["methods"] for c in nfst["ls"]["chains"] if c["name"] == CONF_CHAIN_NAME)
+        assert current_method == chain_methods[0]  # sanity check
+
+        # use first method and save second method for the next step
+        authmethod = chain_methods[0]
+        global auth_step2
+        auth_step2 = chain_methods[1]
+    else:
+        # we are at step 4, use information form step 3
+        authmethod = auth_step2
 
     if authmethod == "LDAP_PASSWORD:1":  # password
         form.fill_form("nffc", get_password(), secret=True)
-        auth_step2 = True
-    elif authmethod == "TOTP:1" or (auth_step2 and auth_step2_name == "TOTP:1"):  # totp pin
+    elif authmethod == "TOTP:1":  # totp pin
         form.fill_form("nffc", get_totp())
-        auth_step2 = False
-    elif authmethod == "SMARTPHONE:1" or (auth_step2 and auth_step2_name == "SMARTPHONE:1"):
+    elif authmethod == "SMARTPHONE:1":
         input("Waiting for acceptance of request in NetIQ app. Press enter if done.")
         time.sleep(0.5)
-        auth_step2 = False
 
 
 def extract_multi(pattern_str, content):

@@ -267,6 +267,7 @@ counter = 1
 
 while form is not None:
     log(f"Step {counter!s}")
+    form.merge_input_elements()
     r = request_with_method(form.method, form.url, form.input_elements)
     con = r.content.decode()
 

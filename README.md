@@ -108,6 +108,10 @@ you will be prompted to enter your 6 digit TOTP pin instead.
 The totp secret has to be encoded as base32. If you have a hex-encoded
 secret, prefix the secret with `hex:`.
 
+The `chain` parameter configures the selected authentication method. The default
+is `PW+TOTP-VPN` for using TOTP. Another option is `PW+Smartphone-VPN` for using
+the NetIQ app. Other options are currently not supported.
+
 ### VPN config
 
 The parameters `login-url` and `sso-cookie-name` should already be set to the

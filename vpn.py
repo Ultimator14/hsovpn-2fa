@@ -6,7 +6,6 @@ import json
 import re
 import subprocess
 import sys
-import time
 from html.parser import HTMLParser
 from urllib.parse import urlparse
 
@@ -244,7 +243,6 @@ def fill_form(form):
         form.fill_form("nffc", get_totp())
     elif authmethod == "SMARTPHONE:1":
         input("Waiting for acceptance of request in NetIQ app. Press enter if done.")
-        time.sleep(0.5)
 
 
 def extract_multi(pattern_str, content):
@@ -367,7 +365,6 @@ if CONF_OC_DICT:
     try:
         p = subprocess.run(command_line)
     except KeyboardInterrupt:
-        time.sleep(0.5)
         print("Terminated with Ctrl-C")
 else:
     print(SSO_COOKIE)

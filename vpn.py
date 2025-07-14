@@ -20,6 +20,7 @@ with open("secrets.json", encoding="utf-8") as afile:
 CONF_USERNAME = json_data["username"]  # username
 CONF_VPN_URL = json_data["login-url"]  # sso-v2-login url
 CONF_SSO_COOKIE_NAME = json_data["sso-cookie-name"]  # name for the sso cookie
+CONF_CHAIN_NAME = json_data["chain"]  # the login chain to use
 # optional values
 CONF_PASSWORD = json_data.get("password")  # password
 CONF_TOTP_SECRET = json_data.get("totp")  # totp secret
@@ -214,8 +215,7 @@ auth_step2_name = None
 def fill_form(form):
     """Add user input to form"""
     form.fill_form("Ecom_User_ID", CONF_USERNAME)  # username prompt
-    chain_name = "PW+TOTP-VPN"
-    form.fill_form("nfchn", chain_name)  # select totp
+    form.fill_form("nfchn", CONF_CHAIN_NAME)  # select totp
 
     global auth_step2
     global auth_step2_name
@@ -226,7 +226,7 @@ def fill_form(form):
             nfst = json.loads(base64.b64decode(nfst).decode("utf-8"))
             authmethod = nfst["ls"]["current_method"]
             for chain in nfst["ls"]["chains"]:
-                if chain["name"] == chain_name:
+                if chain["name"] == CONF_CHAIN_NAME:
                     auth_step2_name = chain["methods"][1]
                     break
         except:

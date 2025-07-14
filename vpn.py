@@ -213,9 +213,7 @@ def fill_form(form):
     form.fill_form("Ecom_User_ID", CONF_USERNAME)  # username prompt
     form.fill_form("nfchn", CONF_CHAIN_NAME)  # select totp
 
-    nfst_b64 = form.input_elements.get("nfst")
-
-    if nfst_b64 in [None, "null"]:
+    if (nfst_b64 := form.input_elements.get("nfst", "null")) == "null":
         # step 1 or 2 (username or chain selection)
         return
 
@@ -228,17 +226,14 @@ def fill_form(form):
         log("Parsing of `nfst` failed. The auth2step value of this parameter has changed. This message is harmless.", e)
         return
 
-    current_method = nfst["ls"]["current_method"]
-
-    if current_method is not None:
+    if (current_method := nfst["ls"]["current_method"]) is not None:
         # we are at step 3, extract information
         chain_methods = next(c["methods"] for c in nfst["ls"]["chains"] if c["name"] == CONF_CHAIN_NAME)
         assert current_method == chain_methods[0]  # sanity check
 
         # use first method and save second method for the next step
-        authmethod = chain_methods[0]
         global auth_step2
-        auth_step2 = chain_methods[1]
+        authmethod, auth_step2 = chain_methods
     else:
         # we are at step 4, use information form step 3
         authmethod = auth_step2

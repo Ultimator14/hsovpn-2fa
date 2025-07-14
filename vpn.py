@@ -43,7 +43,6 @@ else:
 base_url = "https://" + urlparse(CONF_VPN_URL).netloc
 
 _password = None
-_totp = None
 
 
 def get_password():

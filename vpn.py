@@ -63,9 +63,9 @@ def get_totp():
 s = requests.Session()
 
 
-def log(msg):
+def log(*args):
     if CONF_DEBUG:
-        print(msg)
+        print(*args)
 
 
 def request_with_method(method, url, data):
